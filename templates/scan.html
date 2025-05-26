@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scan Animal QR Code</title>
+</head>
+<body>
+    <h1>Scan Animal QR Code</h1>
+    <div id="reader" style="width: 400px;"></div>
+    <p id="result"></p>
+
+    <!-- Import html5-qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+
+    <script>
+        function onScanSuccess(decodedText, decodedResult) {
+            // Redirect browser to decoded URL (which is animal profile URL)
+            window.location.href = decodedText;
+        }
+
+        function onScanFailure(error) {
+            // handle scan failure, if needed
+            // console.warn(`QR code scan error = ${error}`);
+        }
+
+        let html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: 250 });
+
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    </script>
+</body>
+</html>

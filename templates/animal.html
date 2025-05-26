@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ animal[1] }}'s History</title>
+</head>
+<body>
+    <h1>Animal: {{ animal[1] }} ({{ animal[2] }})</h1>
+    <p>Owner: {{ animal[3] }} | Contact: {{ animal[4] }}</p>
+    <img src="{{ url_for('static', filename='qrcodes/' + animal[5].split('/')[-1]) }}" width="120"><br><br>
+
+    <h2>Add Treatment</h2>
+    <form method="post">
+        <label for="date">Date:</label><br>
+        <input type="date" id="date" name="date" value="{{ current_date }}" required><br><br>
+
+        <label for="diagnosis">Diagnosis:</label><br>
+        <input type="text" id="diagnosis" name="diagnosis" required><br><br>
+
+        <label for="treatment">Treatment:</label><br>
+        <input type="text" id="treatment" name="treatment" required><br><br>
+
+        <button type="submit">Add</button>
+    </form>
+
+    <h2>Treatment History</h2>
+    <ul>
+        {% if history %}
+            {% for treatment in history %}
+                <li>
+                    <b>{{ treatment[1] }}</b>: {{ treatment[2] }} → {{ treatment[3] }}<br>
+                    <a href="{{ url_for('edit_treatment', animal_id=animal[0], treatment_id=treatment[0]) }}">Edit</a> |
+                    <a href="{{ url_for('delete_treatment', animal_id=animal[0], treatment_id=treatment[0]) }}" onclick="return confirm('Delete this record?');">Delete</a>
+                </li><br>
+            {% endfor %}
+        {% else %}
+            <li>No treatment history available.</li>
+        {% endif %}
+    </ul>
+
+    <a href="{{ url_for('index') }}">← Back</a>
+</body>
+</html>

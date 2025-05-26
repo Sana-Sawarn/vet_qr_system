@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Animal QR System</title>
+</head>
+<body>
+    <h1>Register Animal</h1>
+    <form action="/add" method="post">
+        Name: <input type="text" name="name" required><br>
+        Species: <input type="text" name="species" required><br>
+        Owner Name: <input type="text" name="owner" required><br>
+        Contact: <input type="text" name="contact" required><br>
+        <button type="submit">Generate QR</button>
+    </form>
+
+    <h2>Registered Animals</h2>
+    <ul>
+        {% for a in animals %}
+            <li>
+                <a href="{{ url_for('animal_detail', animal_id=a[0]) }}">
+                    {{ a[1] }} - {{ a[2] }} (Owner: {{ a[3] }})
+                </a><br>
+                <img src="{{ url_for('static', filename='qrcodes/' + a[5].split('/')[-1]) }}" width="100">
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
