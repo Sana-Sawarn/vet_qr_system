@@ -1,13 +1,29 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import qrcode
 import sqlite3
 import os
 from datetime import datetime
+from functools import wraps
 
 app = Flask(__name__)
+app.secret_key = 'your_strong_random_secret_key_here'  # CHANGE this to a strong secret key
 
 QR_FOLDER = os.path.join('static', 'qrcodes')
 os.makedirs(QR_FOLDER, exist_ok=True)
+
+# Only one user with username and password as you requested
+USERS = {
+    "buddy pet care and clinic": "baborajss"
+}
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            flash("Please log in first.", "warning")
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def init_db():
     conn = sqlite3.connect('database.db')
@@ -27,7 +43,27 @@ def init_db():
     conn.commit()
     conn.close()
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username'].strip().lower()
+        password = request.form['password']
+        if username in USERS and USERS[username] == password:
+            session['username'] = username
+            flash(f"Welcome, {username}!", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Invalid username or password", "danger")
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    flash("You have been logged out.", "info")
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def index():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -37,6 +73,7 @@ def index():
     return render_template('index.html', animals=animals)
 
 @app.route('/add', methods=['POST'])
+@login_required
 def add_animal():
     name = request.form['name']
     species = request.form['species']
@@ -66,6 +103,7 @@ def add_animal():
     return redirect(url_for('index'))
 
 @app.route('/animal/<int:animal_id>', methods=['GET', 'POST'])
+@login_required
 def animal_detail(animal_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -90,6 +128,7 @@ def animal_detail(animal_id):
     return render_template('animal.html', animal=animal, history=history, current_date=current_date)
 
 @app.route('/animal/<int:animal_id>/edit/<int:treatment_id>', methods=['GET', 'POST'])
+@login_required
 def edit_treatment(animal_id, treatment_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -110,6 +149,7 @@ def edit_treatment(animal_id, treatment_id):
     return render_template('edit_treatment.html', animal_id=animal_id, treatment_id=treatment_id, record=record)
 
 @app.route('/animal/<int:animal_id>/delete/<int:treatment_id>')
+@login_required
 def delete_treatment(animal_id, treatment_id):
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
@@ -119,9 +159,11 @@ def delete_treatment(animal_id, treatment_id):
     return redirect(url_for('animal_detail', animal_id=animal_id))
 
 @app.route('/scan')
+@login_required
 def scan_qr():
     return render_template('scan.html')
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
+
