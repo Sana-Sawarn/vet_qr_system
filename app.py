@@ -8,13 +8,16 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = 'your_strong_random_secret_key_here'
 
+# Folder to save QR codes
 QR_FOLDER = os.path.join('static', 'qrcodes')
 os.makedirs(QR_FOLDER, exist_ok=True)
 
+# Simple user store
 USERS = {
     "buddy pet care and clinic": "baborajss"
 }
 
+# Decorator for routes that require login
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -24,12 +27,17 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Initialize the database and tables if they don't exist
 def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS animals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT, species TEXT, owner TEXT, contact TEXT, qr_path TEXT
+        name TEXT,
+        species TEXT,
+        owner TEXT,
+        contact TEXT,
+        qr_path TEXT
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS treatments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,6 +97,7 @@ def add_animal():
 
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
+    # Check if animal with same name and owner already exists
     c.execute("SELECT id, qr_path FROM animals WHERE name = ? AND owner = ?", (name, owner))
     existing = c.fetchone()
 
@@ -98,29 +107,34 @@ def add_animal():
         conn.close()
         return redirect(url_for('animal_detail', animal_id=animal_id))
 
+    # Insert new animal record
     c.execute("INSERT INTO animals (name, species, owner, contact, qr_path) VALUES (?, ?, ?, ?, '')",
               (name, species, owner, contact))
     animal_id = c.lastrowid
     conn.commit()
 
-    safe_name = "_".join(name.strip().title().split())
-    safe_owner = "_".join(owner.strip().title().split())
+    # Create QR code filename and paths
+    safe_name = "_".join(name.title().split())
+    safe_owner = "_".join(owner.title().split())
     filename = f"{safe_name}_{safe_owner}_{animal_id}.png"
     qr_relative_path = f"qrcodes/{filename}"
     qr_full_path = os.path.join('static', 'qrcodes', filename)
 
-    # ✅ Use fixed local IP instead of host_url
+    # Generate QR code URL (fixed local IP)
     qr_url = f"http://192.168.1.6:5000/public/animal/{animal_id}"
 
+    # Generate and save QR code image
     qr_img = qrcode.make(qr_url)
     os.makedirs(os.path.dirname(qr_full_path), exist_ok=True)
     qr_img.save(qr_full_path)
+
+    # Update animal record with QR code path
     c.execute("UPDATE animals SET qr_path = ? WHERE id = ?", (qr_relative_path, animal_id))
     conn.commit()
     conn.close()
 
+    flash("Animal added successfully!", "success")
     return redirect(url_for('index'))
-
 
 @app.route('/animal/<int:animal_id>', methods=['GET', 'POST'])
 @login_required
@@ -164,27 +178,21 @@ def edit_treatment(animal_id, treatment_id):
     c = conn.cursor()
 
     if request.method == 'POST':
-        # Get updated values from form
         date = request.form['date']
         diagnosis = request.form['diagnosis']
         treatment = request.form['treatment']
-
-        # Update treatment record
         c.execute(
             "UPDATE treatments SET date = ?, diagnosis = ?, treatment = ? WHERE id = ?",
             (date, diagnosis, treatment, treatment_id)
         )
         conn.commit()
         conn.close()
-        # Redirect back to animal detail page after saving
         return redirect(url_for('animal_detail', animal_id=animal_id))
 
-    # GET request: Fetch the treatment record to pre-fill the form
     c.execute("SELECT * FROM treatments WHERE id = ?", (treatment_id,))
     record = c.fetchone()
     conn.close()
 
-    # Render the edit treatment form with the existing record data
     return render_template('edit_treatment.html', animal_id=animal_id, treatment_id=treatment_id, record=record)
 
 @app.route('/animal/<int:animal_id>/edit_vaccination/<int:vaccination_id>', methods=['GET', 'POST'])
@@ -214,7 +222,6 @@ def edit_vaccination(animal_id, vaccination_id):
         return "Vaccination record not found", 404
 
     return render_template('edit_vaccine.html', animal_id=animal_id, vaccination_id=vaccination_id, record=record)
-
 
 @app.route('/animal/<int:animal_id>/delete_treatment/<int:treatment_id>')
 @login_required
@@ -268,5 +275,3 @@ def public_animal_view(animal_id):
 if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
-
-
