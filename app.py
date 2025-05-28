@@ -12,12 +12,15 @@ app.secret_key = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 QR_FOLDER = os.path.join('static', 'qrcodes')
 os.makedirs(QR_FOLDER, exist_ok=True)
 
-# Simple user store
+# Absolute database path (important for Render deployment)
+DATABASE_PATH = os.path.join(os.getcwd(), 'database.db')
+
+# Simple user store (consider a real DB for production)
 USERS = {
     "buddy pet care and clinic": "baborajss"
 }
 
-# Decorator for routes that require login
+# Decorator for routes requiring login
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -27,9 +30,9 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Initialize the database and tables if they don't exist
+# Initialize DB tables if not exist
 def init_db():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS animals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,6 +60,10 @@ def init_db():
     )''')
     conn.commit()
     conn.close()
+    print("✅ Database initialized")
+
+# Initialize DB on app start (works with Flask 3.x and Gunicorn)
+init_db()
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -80,7 +87,7 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM animals")
     animals = c.fetchall()
@@ -95,9 +102,8 @@ def add_animal():
     owner = request.form['owner'].strip()
     contact = request.form['contact'].strip()
 
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
-    # Check if animal with same name and owner already exists
     c.execute("SELECT id, qr_path FROM animals WHERE name = ? AND owner = ?", (name, owner))
     existing = c.fetchone()
 
@@ -107,28 +113,23 @@ def add_animal():
         conn.close()
         return redirect(url_for('animal_detail', animal_id=animal_id))
 
-    # Insert new animal record
     c.execute("INSERT INTO animals (name, species, owner, contact, qr_path) VALUES (?, ?, ?, ?, '')",
               (name, species, owner, contact))
     animal_id = c.lastrowid
     conn.commit()
 
-    # Create QR code filename and paths
     safe_name = "_".join(name.title().split())
     safe_owner = "_".join(owner.title().split())
     filename = f"{safe_name}_{safe_owner}_{animal_id}.png"
     qr_relative_path = f"qrcodes/{filename}"
-    qr_full_path = os.path.join('static', 'qrcodes', filename)
+    qr_full_path = os.path.join(QR_FOLDER, filename)
 
-    # Generate QR code URL (fixed local IP)
-    qr_url = f"http://192.168.1.6:5000/public/animal/{animal_id}"
+    base_url = os.environ.get("BASE_URL", "http://localhost:5000")
+    qr_url = f"{base_url}/public/animal/{animal_id}"
 
-    # Generate and save QR code image
     qr_img = qrcode.make(qr_url)
-    os.makedirs(os.path.dirname(qr_full_path), exist_ok=True)
     qr_img.save(qr_full_path)
 
-    # Update animal record with QR code path
     c.execute("UPDATE animals SET qr_path = ? WHERE id = ?", (qr_relative_path, animal_id))
     conn.commit()
     conn.close()
@@ -139,7 +140,7 @@ def add_animal():
 @app.route('/animal/<int:animal_id>', methods=['GET', 'POST'])
 @login_required
 def animal_detail(animal_id):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
 
     if request.method == 'POST':
@@ -174,17 +175,15 @@ def animal_detail(animal_id):
 @app.route('/animal/<int:animal_id>/edit_treatment/<int:treatment_id>', methods=['GET', 'POST'])
 @login_required
 def edit_treatment(animal_id, treatment_id):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
 
     if request.method == 'POST':
         date = request.form['date']
         diagnosis = request.form['diagnosis']
         treatment = request.form['treatment']
-        c.execute(
-            "UPDATE treatments SET date = ?, diagnosis = ?, treatment = ? WHERE id = ?",
-            (date, diagnosis, treatment, treatment_id)
-        )
+        c.execute("UPDATE treatments SET date = ?, diagnosis = ?, treatment = ? WHERE id = ?",
+                  (date, diagnosis, treatment, treatment_id))
         conn.commit()
         conn.close()
         return redirect(url_for('animal_detail', animal_id=animal_id))
@@ -198,23 +197,20 @@ def edit_treatment(animal_id, treatment_id):
 @app.route('/animal/<int:animal_id>/edit_vaccination/<int:vaccination_id>', methods=['GET', 'POST'])
 @login_required
 def edit_vaccination(animal_id, vaccination_id):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
 
     if request.method == 'POST':
         date = request.form['date']
         vaccine = request.form['vaccine']
         due_date = request.form['due_date']
-        c.execute('''
-            UPDATE vaccinations
-            SET date = ?, vaccine = ?, due_date = ?
-            WHERE id = ?
-        ''', (date, vaccine, due_date, vaccination_id))
+        c.execute("UPDATE vaccinations SET date = ?, vaccine = ?, due_date = ? WHERE id = ?",
+                  (date, vaccine, due_date, vaccination_id))
         conn.commit()
         conn.close()
         return redirect(url_for('animal_detail', animal_id=animal_id))
 
-    c.execute('SELECT * FROM vaccinations WHERE id = ?', (vaccination_id,))
+    c.execute("SELECT * FROM vaccinations WHERE id = ?", (vaccination_id,))
     record = c.fetchone()
     conn.close()
 
@@ -226,7 +222,7 @@ def edit_vaccination(animal_id, vaccination_id):
 @app.route('/animal/<int:animal_id>/delete_treatment/<int:treatment_id>')
 @login_required
 def delete_treatment(animal_id, treatment_id):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM treatments WHERE id = ?", (treatment_id,))
     conn.commit()
@@ -236,7 +232,7 @@ def delete_treatment(animal_id, treatment_id):
 @app.route('/animal/<int:animal_id>/delete_vaccination/<int:vaccination_id>')
 @login_required
 def delete_vaccination(animal_id, vaccination_id):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM vaccinations WHERE id = ?", (vaccination_id,))
     conn.commit()
@@ -246,7 +242,7 @@ def delete_vaccination(animal_id, vaccination_id):
 @app.route('/animal/<int:animal_id>/delete', methods=['POST'])
 @login_required
 def delete_animal(animal_id):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM treatments WHERE animal_id = ?", (animal_id,))
     c.execute("DELETE FROM vaccinations WHERE animal_id = ?", (animal_id,))
@@ -258,7 +254,7 @@ def delete_animal(animal_id):
 
 @app.route('/public/animal/<int:animal_id>')
 def public_animal_view(animal_id):
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM animals WHERE id = ?", (animal_id,))
     animal = c.fetchone()
@@ -272,6 +268,6 @@ def public_animal_view(animal_id):
     return render_template('public_animal.html', animal=animal, treatment_history=treatment_history,
                            vaccination_history=vaccination_history)
 
+# Run app locally
 if __name__ == '__main__':
-    init_db()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
