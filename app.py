@@ -6,7 +6,7 @@ from datetime import datetime
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = 'your_strong_random_secret_key_here'
+app.secret_key = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
 # Folder to save QR codes
 QR_FOLDER = os.path.join('static', 'qrcodes')
