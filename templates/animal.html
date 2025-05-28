@@ -1,42 +1,153 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{{ animal[1] }}'s History</title>
+    <meta charset="UTF-8" />
+    <title>Animal Details</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
 </head>
-<body>
-    <h1>Animal: {{ animal[1] }} ({{ animal[2] }})</h1>
-    <p>Owner: {{ animal[3] }} | Contact: {{ animal[4] }}</p>
-    <img src="{{ url_for('static', filename='qrcodes/' + animal[5].split('/')[-1]) }}" width="120"><br><br>
+<body class="bg-light">
 
-    <h2>Add Treatment</h2>
-    <form method="post">
-        <label for="date">Date:</label><br>
-        <input type="date" id="date" name="date" value="{{ current_date }}" required><br><br>
+<div class="container mt-5">
+    <h2 class="mb-4">Animal Details</h2>
 
-        <label for="diagnosis">Diagnosis:</label><br>
-        <input type="text" id="diagnosis" name="diagnosis" required><br><br>
+    <div class="card p-4">
+        <h4>{{ animal[1] }} ({{ animal[2] }})</h4>
+        <p><strong>Owner:</strong> {{ animal[3] }}</p>
+        <p><strong>Contact:</strong> {{ animal[4] }}</p>
 
-        <label for="treatment">Treatment:</label><br>
-        <input type="text" id="treatment" name="treatment" required><br><br>
-
-        <button type="submit">Add</button>
-    </form>
-
-    <h2>Treatment History</h2>
-    <ul>
-        {% if history %}
-            {% for treatment in history %}
-                <li>
-                    <b>{{ treatment[1] }}</b>: {{ treatment[2] }} → {{ treatment[3] }}<br>
-                    <a href="{{ url_for('edit_treatment', animal_id=animal[0], treatment_id=treatment[0]) }}">Edit</a> |
-                    <a href="{{ url_for('delete_treatment', animal_id=animal[0], treatment_id=treatment[0]) }}" onclick="return confirm('Delete this record?');">Delete</a>
-                </li><br>
-            {% endfor %}
-        {% else %}
-            <li>No treatment history available.</li>
+        {% if animal[5] %}
+        <div class="mb-3">
+            <h5>QR Code:</h5>
+            <a href="{{ url_for('static', filename=animal[5]) }}" target="_blank" rel="noopener noreferrer">
+                <img src="{{ url_for('static', filename=animal[5]) }}" width="200" alt="QR Code" />
+            </a>
+            <div class="mt-2">
+                <a href="{{ url_for('static', filename=animal[5]) }}" target="_blank" class="btn btn-outline-secondary btn-sm">🖨️ Print QR</a>
+                <a href="https://wa.me/?text={{ request.host_url }}public/animal/{{ animal[0] }}" target="_blank" class="btn btn-success btn-sm">📤 WhatsApp</a>
+                <a href="mailto:?subject=Animal Record&body=Check this record: {{ request.host_url }}public/animal/{{ animal[0] }}" class="btn btn-info btn-sm">📧 Email</a>
+            </div>
+        </div>
         {% endif %}
-    </ul>
+    </div>
 
-    <a href="{{ url_for('index') }}">← Back</a>
+    <!-- Treatment Record Form -->
+    <div class="card p-4 mt-4">
+        <form method="POST">
+            <input type="hidden" name="type" value="treatment" />
+            <h5>Add Treatment Record</h5>
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label>Date</label>
+                    <input type="date" name="date" value="{{ current_date }}" class="form-control" required />
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Diagnosis</label>
+                    <input type="text" name="diagnosis" class="form-control" required />
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Treatment</label>
+                    <input type="text" name="treatment" class="form-control" required />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Treatment</button>
+        </form>
+    </div>
+
+    <!-- Treatment History -->
+    <div class="card p-4 mt-4">
+        <h5>Treatment History</h5>
+        {% if treatment_history %}
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Diagnosis</th>
+                    <th>Treatment</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in treatment_history %}
+                <tr>
+                    <td>{{ record[1] }}</td>  <!-- date -->
+                    <td>{{ record[2] }}</td>  <!-- diagnosis -->
+                    <td>{{ record[3] }}</td>  <!-- treatment -->
+                    <td>
+                        <a href="{{ url_for('edit_treatment', animal_id=animal[0], treatment_id=record[0]) }}" class="btn btn-sm btn-warning">Edit</a>
+                        <a href="{{ url_for('delete_treatment', animal_id=animal[0], treatment_id=record[0]) }}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p>No treatment records available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Vaccination Record Form -->
+    <div class="card p-4 mt-4">
+        <form method="POST">
+            <input type="hidden" name="type" value="vaccination" />
+            <h5>Add Vaccination Record</h5>
+            <div class="form-row">
+                <div class="form-group col-md-4">
+                    <label>Date</label>
+                    <input type="date" name="date" value="{{ current_date }}" class="form-control" required />
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Vaccine</label>
+                    <input type="text" name="vaccine" class="form-control" required />
+                </div>
+                <div class="form-group col-md-4">
+                    <label>Due Date</label>
+                    <input type="date" name="due_date" class="form-control" required />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Vaccination</button>
+        </form>
+    </div>
+
+    <!-- Vaccination History -->
+    <div class="card p-4 mt-4">
+        <h5>Vaccination History</h5>
+        {% if vaccination_history %}
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Vaccine</th>
+                    <th>Due Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in vaccination_history %}
+                <tr>
+                    <td>{{ record[1] }}</td>  <!-- date -->
+                    <td>{{ record[2] }}</td>  <!-- vaccine -->
+                    <td>{{ record[3] }}</td>  <!-- due_date -->
+                    <td>
+                        <a href="{{ url_for('edit_vaccination', animal_id=animal[0], vaccination_id=record[0]) }}" class="btn btn-sm btn-warning">Edit</a>
+                        <a href="{{ url_for('delete_vaccination', animal_id=animal[0], vaccination_id=record[0]) }}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p>No vaccination records available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Delete Animal + Back -->
+    <div class="mt-4">
+        <form method="POST" action="{{ url_for('delete_animal', animal_id=animal[0]) }}" onsubmit="return confirm('Are you sure you want to delete this animal?')">
+            <button type="submit" class="btn btn-danger">🗑️ Delete Animal</button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">← Back to List</a>
+        </form>
+    </div>
+</div>
+
 </body>
 </html>
