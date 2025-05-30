@@ -34,14 +34,17 @@ def login_required(f):
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
+    # Create animals table if not exists (without qr_image initially)
     c.execute('''CREATE TABLE IF NOT EXISTS animals (
         id SERIAL PRIMARY KEY,
         name TEXT,
         species TEXT,
         owner TEXT,
-        contact TEXT,
-        qr_image BYTEA
+        contact TEXT
     )''')
+
+    # Add qr_image column if it does not exist
+    c.execute('ALTER TABLE animals ADD COLUMN IF NOT EXISTS qr_image BYTEA')
 
     c.execute('''CREATE TABLE IF NOT EXISTS treatments (
         id SERIAL PRIMARY KEY,
@@ -226,4 +229,4 @@ def public_animal_view(animal_id):
 
 if __name__ == '__main__':
     # For production, debug should be False
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
