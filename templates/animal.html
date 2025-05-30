@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Animal Details - Buddy Pet Care and Clinic</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
 </head>
 <body class="bg-light">
@@ -17,6 +18,7 @@
     <h2 class="mb-4">Animal Details</h2>
 
     <div class="card p-4 mb-4">
+        <!-- Assuming animal tuple: (id, name, species, owner, contact) -->
         <h4>{{ animal[1] }} ({{ animal[2] }})</h4>
         <p><strong>Owner:</strong> {{ animal[3] }}</p>
         <p><strong>Contact:</strong> {{ animal[4] }}</p>
@@ -29,7 +31,7 @@
             </a>
             <div class="mt-2">
                 <a href="data:image/png;base64,{{ qr_base64 }}" target="_blank" class="btn btn-outline-secondary btn-sm mr-2">🖨️ Print QR</a>
-                <a href="https://wa.me/?text={{ request.host_url }}public/animal/{{ animal[0] }}" target="_blank" class="btn btn-success btn-sm mr-2">📤 WhatsApp</a>
+                <a href="https://wa.me/?text={{ (request.host_url ~ 'public/animal/' ~ animal[0]) | url_encode }}" target="_blank" class="btn btn-success btn-sm mr-2">📤 WhatsApp</a>
                 <a href="mailto:?subject=Animal Record&body=Check this record: {{ request.host_url }}public/animal/{{ animal[0] }}" class="btn btn-info btn-sm">📧 Email</a>
             </div>
         </div>
@@ -44,15 +46,36 @@
             <div class="form-row">
                 <div class="form-group col-md-4">
                     <label for="treatment-date">Date</label>
-                    <input type="date" id="treatment-date" name="date" value="{{ current_date }}" class="form-control" required />
+                    <input
+                        type="date"
+                        id="treatment-date"
+                        name="date"
+                        value="{{ current_date }}"
+                        class="form-control"
+                        required
+                    />
                 </div>
                 <div class="form-group col-md-4">
                     <label for="diagnosis">Diagnosis</label>
-                    <input type="text" id="diagnosis" name="diagnosis" class="form-control" placeholder="Diagnosis details" required />
+                    <input
+                        type="text"
+                        id="diagnosis"
+                        name="diagnosis"
+                        class="form-control"
+                        placeholder="Diagnosis details"
+                        required
+                    />
                 </div>
                 <div class="form-group col-md-4">
                     <label for="treatment">Treatment</label>
-                    <input type="text" id="treatment" name="treatment" class="form-control" placeholder="Treatment details" required />
+                    <input
+                        type="text"
+                        id="treatment"
+                        name="treatment"
+                        class="form-control"
+                        placeholder="Treatment details"
+                        required
+                    />
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Add Treatment</button>
@@ -74,6 +97,7 @@
             </thead>
             <tbody>
                 {% for record in treatment_history %}
+                <!-- record assumed to be (id, date, diagnosis, treatment) -->
                 <tr>
                     <td>{{ record[1] }}</td>
                     <td>{{ record[2] }}</td>
@@ -99,15 +123,35 @@
             <div class="form-row">
                 <div class="form-group col-md-4">
                     <label for="vaccination-date">Date</label>
-                    <input type="date" id="vaccination-date" name="date" value="{{ current_date }}" class="form-control" required />
+                    <input
+                        type="date"
+                        id="vaccination-date"
+                        name="date"
+                        value="{{ current_date }}"
+                        class="form-control"
+                        required
+                    />
                 </div>
                 <div class="form-group col-md-4">
                     <label for="vaccine">Vaccine</label>
-                    <input type="text" id="vaccine" name="vaccine" class="form-control" placeholder="Vaccine name" required />
+                    <input
+                        type="text"
+                        id="vaccine"
+                        name="vaccine"
+                        class="form-control"
+                        placeholder="Vaccine name"
+                        required
+                    />
                 </div>
                 <div class="form-group col-md-4">
                     <label for="due-date">Due Date</label>
-                    <input type="date" id="due-date" name="due_date" class="form-control" required />
+                    <input
+                        type="date"
+                        id="due-date"
+                        name="due_date"
+                        class="form-control"
+                        required
+                    />
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Add Vaccination</button>
@@ -129,6 +173,7 @@
             </thead>
             <tbody>
                 {% for record in vaccination_history %}
+                <!-- record assumed to be (id, date, vaccine, due_date) -->
                 <tr>
                     <td>{{ record[1] }}</td>
                     <td>{{ record[2] }}</td>

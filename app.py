@@ -34,7 +34,6 @@ def login_required(f):
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
-    # Create animals table if not exists (without qr_image initially)
     c.execute('''CREATE TABLE IF NOT EXISTS animals (
         id SERIAL PRIMARY KEY,
         name TEXT,
@@ -42,10 +41,11 @@ def init_db():
         owner TEXT,
         contact TEXT
     )''')
-
-    # Add qr_image column if it does not exist
-    c.execute('ALTER TABLE animals ADD COLUMN IF NOT EXISTS qr_image BYTEA')
-
+    # Add column if not exists is not standard SQL, handle with try/except or ignore error
+    try:
+        c.execute('ALTER TABLE animals ADD COLUMN qr_image BYTEA')
+    except psycopg2.errors.DuplicateColumn:
+        pass
     c.execute('''CREATE TABLE IF NOT EXISTS treatments (
         id SERIAL PRIMARY KEY,
         animal_id INTEGER REFERENCES animals(id),
@@ -53,7 +53,6 @@ def init_db():
         diagnosis TEXT,
         treatment TEXT
     )''')
-
     c.execute('''CREATE TABLE IF NOT EXISTS vaccinations (
         id SERIAL PRIMARY KEY,
         animal_id INTEGER REFERENCES animals(id),
@@ -171,12 +170,71 @@ def animal_detail(animal_id):
     return render_template('animal.html', animal=animal, treatment_history=treatment_history,
                            vaccination_history=vaccination_history, current_date=current_date, qr_base64=qr_base64)
 
+@app.route('/animal/<int:animal_id>/vaccination/<int:vaccination_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_vaccination(animal_id, vaccination_id):
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    if request.method == 'POST':
+        date = request.form['date']
+        vaccine = request.form['vaccine']
+        due_date = request.form['due_date']
+        c.execute("""
+            UPDATE vaccinations SET date=%s, vaccine=%s, due_date=%s
+            WHERE id=%s AND animal_id=%s
+        """, (date, vaccine, due_date, vaccination_id, animal_id))
+        conn.commit()
+        conn.close()
+        flash("Vaccination record updated successfully.", "success")
+        return redirect(url_for('animal_detail', animal_id=animal_id))
+
+    c.execute("SELECT id, date, vaccine, due_date FROM vaccinations WHERE id = %s AND animal_id = %s",
+              (vaccination_id, animal_id))
+    vaccination = c.fetchone()
+    conn.close()
+
+    if not vaccination:
+        flash("Vaccination record not found.", "danger")
+        return redirect(url_for('animal_detail', animal_id=animal_id))
+
+    return render_template('edit_vaccination.html', animal_id=animal_id, vaccination=vaccination)
+
+@app.route('/animal/<int:animal_id>/treatment/<int:treatment_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_treatment(animal_id, treatment_id):
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    if request.method == 'POST':
+        date = request.form['date']
+        diagnosis = request.form['diagnosis']
+        treatment_text = request.form['treatment']
+        c.execute("""
+            UPDATE treatments SET date=%s, diagnosis=%s, treatment=%s
+            WHERE id=%s AND animal_id=%s
+        """, (date, diagnosis, treatment_text, treatment_id, animal_id))
+        conn.commit()
+        conn.close()
+        flash("Treatment record updated successfully.", "success")
+        return redirect(url_for('animal_detail', animal_id=animal_id))
+
+    c.execute("SELECT id, date, diagnosis, treatment FROM treatments WHERE id = %s AND animal_id = %s",
+              (treatment_id, animal_id))
+    treatment = c.fetchone()
+    conn.close()
+
+    if not treatment:
+        flash("Treatment record not found.", "danger")
+        return redirect(url_for('animal_detail', animal_id=animal_id))
+
+    return render_template('edit_treatment.html', animal_id=animal_id, treatment=treatment)
+
 @app.route('/delete_animal/<int:animal_id>', methods=['POST'])
 @login_required
 def delete_animal(animal_id):
     conn = get_db_connection()
     c = conn.cursor()
-    # Delete dependent records first due to foreign key constraints
     c.execute("DELETE FROM treatments WHERE animal_id = %s", (animal_id,))
     c.execute("DELETE FROM vaccinations WHERE animal_id = %s", (animal_id,))
     c.execute("DELETE FROM animals WHERE id = %s", (animal_id,))
@@ -209,24 +267,22 @@ def delete_vaccination(vaccination_id):
 
 @app.route('/public/animal/<int:animal_id>')
 def public_animal_view(animal_id):
+    # Public QR code page (read-only)
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT id, name, species, owner, contact, qr_image FROM animals WHERE id = %s", (animal_id,))
+    c.execute("SELECT id, name, species, owner, contact FROM animals WHERE id = %s", (animal_id,))
     animal = c.fetchone()
+    if not animal:
+        return "Animal not found", 404
     c.execute("SELECT date, diagnosis, treatment FROM treatments WHERE animal_id = %s ORDER BY date DESC", (animal_id,))
     treatment_history = c.fetchall()
     c.execute("SELECT date, vaccine, due_date FROM vaccinations WHERE animal_id = %s ORDER BY date DESC", (animal_id,))
     vaccination_history = c.fetchall()
     conn.close()
 
-    if not animal:
-        return "Animal not found", 404
+    return render_template('public_animal.html', animal=animal,
+                           treatment_history=treatment_history,
+                           vaccination_history=vaccination_history)
 
-    qr_base64 = base64.b64encode(animal[5]).decode('utf-8') if animal and animal[5] else None
-
-    return render_template('public_animal.html', animal=animal, treatment_history=treatment_history,
-                           vaccination_history=vaccination_history, qr_base64=qr_base64)
-
-if __name__ == '__main__':
-    # For production, debug should be False
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
+if __name__ == "__main__":
+    app.run(debug=True)
