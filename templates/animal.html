@@ -7,7 +7,13 @@
 </head>
 <body class="bg-light">
 
-<div class="container mt-5">
+<!-- Clinic Header -->
+<div class="container text-center my-4">
+    <h2 class="font-weight-bold">🐾 Buddy Pet Care and Clinic</h2>
+    <h5 class="text-muted">Dr. Rajesh Kumar</h5>
+</div>
+
+<div class="container mt-3">
     <h2 class="mb-4">Animal Details</h2>
 
     <div class="card p-4">
@@ -15,14 +21,14 @@
         <p><strong>Owner:</strong> {{ animal[3] }}</p>
         <p><strong>Contact:</strong> {{ animal[4] }}</p>
 
-        {% if animal[5] %}
+        {% if qr_base64 %}
         <div class="mb-3">
             <h5>QR Code:</h5>
-            <a href="{{ url_for('static', filename=animal[5]) }}" target="_blank" rel="noopener noreferrer">
-                <img src="{{ url_for('static', filename=animal[5]) }}" width="200" alt="QR Code" />
+            <a href="data:image/png;base64,{{ qr_base64 }}" target="_blank" rel="noopener noreferrer">
+                <img src="data:image/png;base64,{{ qr_base64 }}" width="200" alt="QR Code" />
             </a>
             <div class="mt-2">
-                <a href="{{ url_for('static', filename=animal[5]) }}" target="_blank" class="btn btn-outline-secondary btn-sm">🖨️ Print QR</a>
+                <a href="data:image/png;base64,{{ qr_base64 }}" target="_blank" class="btn btn-outline-secondary btn-sm">🖨️ Print QR</a>
                 <a href="https://wa.me/?text={{ request.host_url }}public/animal/{{ animal[0] }}" target="_blank" class="btn btn-success btn-sm">📤 WhatsApp</a>
                 <a href="mailto:?subject=Animal Record&body=Check this record: {{ request.host_url }}public/animal/{{ animal[0] }}" class="btn btn-info btn-sm">📧 Email</a>
             </div>
@@ -69,9 +75,9 @@
             <tbody>
                 {% for record in treatment_history %}
                 <tr>
-                    <td>{{ record[1] }}</td>  <!-- date -->
-                    <td>{{ record[2] }}</td>  <!-- diagnosis -->
-                    <td>{{ record[3] }}</td>  <!-- treatment -->
+                    <td>{{ record[1] }}</td>
+                    <td>{{ record[2] }}</td>
+                    <td>{{ record[3] }}</td>
                     <td>
                         <a href="{{ url_for('edit_treatment', animal_id=animal[0], treatment_id=record[0]) }}" class="btn btn-sm btn-warning">Edit</a>
                         <a href="{{ url_for('delete_treatment', animal_id=animal[0], treatment_id=record[0]) }}" class="btn btn-sm btn-danger">Delete</a>
@@ -124,9 +130,9 @@
             <tbody>
                 {% for record in vaccination_history %}
                 <tr>
-                    <td>{{ record[1] }}</td>  <!-- date -->
-                    <td>{{ record[2] }}</td>  <!-- vaccine -->
-                    <td>{{ record[3] }}</td>  <!-- due_date -->
+                    <td>{{ record[1] }}</td>
+                    <td>{{ record[2] }}</td>
+                    <td>{{ record[3] }}</td>
                     <td>
                         <a href="{{ url_for('edit_vaccination', animal_id=animal[0], vaccination_id=record[0]) }}" class="btn btn-sm btn-warning">Edit</a>
                         <a href="{{ url_for('delete_vaccination', animal_id=animal[0], vaccination_id=record[0]) }}" class="btn btn-sm btn-danger">Delete</a>

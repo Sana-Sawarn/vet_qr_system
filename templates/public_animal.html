@@ -1,53 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Animal Public Record</title>
+    <meta charset="UTF-8" />
+    <title>Public Animal Record</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
 </head>
 <body class="bg-light">
 
-<div class="container mt-5">
-    <h2 class="mb-4">Animal Information</h2>
+<div class="container mt-4 mb-5">
 
-    <div class="card p-4 mb-4">
-        <h4>{{ animal[1] }} ({{ animal[2] }})</h4>
+    <!-- Clinic Name and Doctor's Name -->
+    <div class="text-center mb-4">
+        <h1 class="display-4 font-weight-bold">Buddy Pet Care and Clinic</h1>
+        <h4 class="text-muted">Dr. Rajesh Kumar</h4>
+        <hr class="my-4" />
+    </div>
+
+    <h2 class="mb-4 text-center">🐾 Public Animal Record</h2>
+
+    <div class="card p-4 shadow-sm">
+        <h4 class="text-primary">{{ animal[1] }} <small class="text-muted">({{ animal[2] }})</small></h4>
         <p><strong>Owner:</strong> {{ animal[3] }}</p>
         <p><strong>Contact:</strong> {{ animal[4] }}</p>
 
-        {% if animal[5] %}
+        {% if qr_base64 %}
         <div class="mt-3">
-            <h5>QR Code:</h5>
-            <img src="{{ url_for('static', filename=animal[5]) }}" alt="QR Code" width="200">
+            <h5>QR Code</h5>
+            <img src="data:image/png;base64,{{ qr_base64 }}" width="200" class="img-thumbnail" alt="QR Code for {{ animal[1] }}" />
         </div>
         {% endif %}
     </div>
 
-    <!-- Vaccination History -->
-    <div class="card p-4">
-        <h4>Vaccination History</h4>
-        {% if vaccination_history %}
-        <table class="table table-bordered table-striped">
-            <thead class="thead-light">
-                <tr>
-                    <th>Date</th>
-                    <th>Vaccine</th>
-                    <th>Due Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for v in vaccination_history %}
-                <tr>
-                    <td>{{ v[0] }}</td>
-                    <td>{{ v[1] }}</td>
-                    <td>{{ v[2] }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Treatment History -->
+    <div class="card p-4 mt-4 shadow-sm">
+        <h5 class="mb-3">🩺 Treatment History</h5>
+        {% if treatment_history %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Diagnosis</th>
+                        <th>Treatment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in treatment_history %}
+                    <tr>
+                        <td>{{ record[1] }}</td>
+                        <td>{{ record[2] }}</td>
+                        <td>{{ record[3] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-            <p>No vaccination records available.</p>
+            <p class="text-muted">No treatment records available.</p>
         {% endif %}
+    </div>
+
+    <!-- Vaccination History -->
+    <div class="card p-4 mt-4 shadow-sm">
+        <h5 class="mb-3">💉 Vaccination History</h5>
+        {% if vaccination_history %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Vaccine</th>
+                        <th>Due Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in vaccination_history %}
+                    <tr>
+                        <td>{{ record[1] }}</td>
+                        <td>{{ record[2] }}</td>
+                        <td>{{ record[3] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p class="text-muted">No vaccination records available.</p>
+        {% endif %}
+    </div>
+
+    <!-- Back button -->
+    <div class="mt-4 text-center">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">← Back to Home</a>
     </div>
 </div>
 
