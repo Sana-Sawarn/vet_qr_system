@@ -1,11 +1,13 @@
 services:
   - type: web
-    name: vet-qr-system
+    name: vet_qr_system
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
     envVars:
-      - key: FLASK_ENV
-        value: production
-      - key: PORT
-        value: 10000
+      - key: SECRET_KEY
+        fromEnvVar: d82b2ab2d5e188d34f2812e94b77af66d207a512c06f6ea469b2db38498304a3
+      - key: DATABASE_URL
+        fromEnvVar: postgresql://vetuser:kYDUeBdRDtf2jCfySWowRKFOcVOTDVto@dpg-d0s3u7adbo4c73bbgemg-a.oregon-postgres.render.com/vet_qr_data
+      - key: BASE_URL
+        fromEnvVar: https://vet-qr-system.onrender.com
