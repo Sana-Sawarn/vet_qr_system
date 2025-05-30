@@ -284,5 +284,4 @@ def public_animal_view(animal_id):
                            treatment_history=treatment_history,
                            vaccination_history=vaccination_history)
 
-if __name__ == "__main__":
-    app.run(debug=True)
+
