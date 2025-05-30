@@ -168,6 +168,42 @@ def animal_detail(animal_id):
     return render_template('animal.html', animal=animal, treatment_history=treatment_history,
                            vaccination_history=vaccination_history, current_date=current_date, qr_base64=qr_base64)
 
+@app.route('/delete_animal/<int:animal_id>', methods=['POST'])
+@login_required
+def delete_animal(animal_id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    # Delete dependent records first due to foreign key constraints
+    c.execute("DELETE FROM treatments WHERE animal_id = %s", (animal_id,))
+    c.execute("DELETE FROM vaccinations WHERE animal_id = %s", (animal_id,))
+    c.execute("DELETE FROM animals WHERE id = %s", (animal_id,))
+    conn.commit()
+    conn.close()
+    flash("Animal and related records deleted successfully.", "success")
+    return redirect(url_for('index'))
+
+@app.route('/delete_treatment/<int:treatment_id>', methods=['POST'])
+@login_required
+def delete_treatment(treatment_id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM treatments WHERE id = %s", (treatment_id,))
+    conn.commit()
+    conn.close()
+    flash("Treatment record deleted.", "success")
+    return redirect(request.referrer or url_for('index'))
+
+@app.route('/delete_vaccination/<int:vaccination_id>', methods=['POST'])
+@login_required
+def delete_vaccination(vaccination_id):
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM vaccinations WHERE id = %s", (vaccination_id,))
+    conn.commit()
+    conn.close()
+    flash("Vaccination record deleted.", "success")
+    return redirect(request.referrer or url_for('index'))
+
 @app.route('/public/animal/<int:animal_id>')
 def public_animal_view(animal_id):
     conn = get_db_connection()
@@ -189,4 +225,5 @@ def public_animal_view(animal_id):
                            vaccination_history=vaccination_history, qr_base64=qr_base64)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
+    # For production, debug should be False
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)

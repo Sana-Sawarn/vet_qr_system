@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>Animal Details</title>
+    <title>Animal Details - Buddy Pet Care and Clinic</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
 </head>
 <body class="bg-light">
@@ -16,20 +16,20 @@
 <div class="container mt-3">
     <h2 class="mb-4">Animal Details</h2>
 
-    <div class="card p-4">
+    <div class="card p-4 mb-4">
         <h4>{{ animal[1] }} ({{ animal[2] }})</h4>
         <p><strong>Owner:</strong> {{ animal[3] }}</p>
         <p><strong>Contact:</strong> {{ animal[4] }}</p>
 
         {% if qr_base64 %}
         <div class="mb-3">
-            <h5>QR Code:</h5>
+            <h5>QR Code</h5>
             <a href="data:image/png;base64,{{ qr_base64 }}" target="_blank" rel="noopener noreferrer">
-                <img src="data:image/png;base64,{{ qr_base64 }}" width="200" alt="QR Code" />
+                <img src="data:image/png;base64,{{ qr_base64 }}" width="200" alt="QR Code" class="img-fluid" />
             </a>
             <div class="mt-2">
-                <a href="data:image/png;base64,{{ qr_base64 }}" target="_blank" class="btn btn-outline-secondary btn-sm">🖨️ Print QR</a>
-                <a href="https://wa.me/?text={{ request.host_url }}public/animal/{{ animal[0] }}" target="_blank" class="btn btn-success btn-sm">📤 WhatsApp</a>
+                <a href="data:image/png;base64,{{ qr_base64 }}" target="_blank" class="btn btn-outline-secondary btn-sm mr-2">🖨️ Print QR</a>
+                <a href="https://wa.me/?text={{ request.host_url }}public/animal/{{ animal[0] }}" target="_blank" class="btn btn-success btn-sm mr-2">📤 WhatsApp</a>
                 <a href="mailto:?subject=Animal Record&body=Check this record: {{ request.host_url }}public/animal/{{ animal[0] }}" class="btn btn-info btn-sm">📧 Email</a>
             </div>
         </div>
@@ -37,22 +37,22 @@
     </div>
 
     <!-- Treatment Record Form -->
-    <div class="card p-4 mt-4">
+    <div class="card p-4 mb-4">
         <form method="POST">
             <input type="hidden" name="type" value="treatment" />
             <h5>Add Treatment Record</h5>
             <div class="form-row">
                 <div class="form-group col-md-4">
-                    <label>Date</label>
-                    <input type="date" name="date" value="{{ current_date }}" class="form-control" required />
+                    <label for="treatment-date">Date</label>
+                    <input type="date" id="treatment-date" name="date" value="{{ current_date }}" class="form-control" required />
                 </div>
                 <div class="form-group col-md-4">
-                    <label>Diagnosis</label>
-                    <input type="text" name="diagnosis" class="form-control" required />
+                    <label for="diagnosis">Diagnosis</label>
+                    <input type="text" id="diagnosis" name="diagnosis" class="form-control" placeholder="Diagnosis details" required />
                 </div>
                 <div class="form-group col-md-4">
-                    <label>Treatment</label>
-                    <input type="text" name="treatment" class="form-control" required />
+                    <label for="treatment">Treatment</label>
+                    <input type="text" id="treatment" name="treatment" class="form-control" placeholder="Treatment details" required />
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Add Treatment</button>
@@ -60,10 +60,10 @@
     </div>
 
     <!-- Treatment History -->
-    <div class="card p-4 mt-4">
+    <div class="card p-4 mb-4">
         <h5>Treatment History</h5>
         {% if treatment_history %}
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped mb-0">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -80,7 +80,7 @@
                     <td>{{ record[3] }}</td>
                     <td>
                         <a href="{{ url_for('edit_treatment', animal_id=animal[0], treatment_id=record[0]) }}" class="btn btn-sm btn-warning">Edit</a>
-                        <a href="{{ url_for('delete_treatment', animal_id=animal[0], treatment_id=record[0]) }}" class="btn btn-sm btn-danger">Delete</a>
+                        <a href="{{ url_for('delete_treatment', animal_id=animal[0], treatment_id=record[0]) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this treatment record?')">Delete</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -92,22 +92,22 @@
     </div>
 
     <!-- Vaccination Record Form -->
-    <div class="card p-4 mt-4">
+    <div class="card p-4 mb-4">
         <form method="POST">
             <input type="hidden" name="type" value="vaccination" />
             <h5>Add Vaccination Record</h5>
             <div class="form-row">
                 <div class="form-group col-md-4">
-                    <label>Date</label>
-                    <input type="date" name="date" value="{{ current_date }}" class="form-control" required />
+                    <label for="vaccination-date">Date</label>
+                    <input type="date" id="vaccination-date" name="date" value="{{ current_date }}" class="form-control" required />
                 </div>
                 <div class="form-group col-md-4">
-                    <label>Vaccine</label>
-                    <input type="text" name="vaccine" class="form-control" required />
+                    <label for="vaccine">Vaccine</label>
+                    <input type="text" id="vaccine" name="vaccine" class="form-control" placeholder="Vaccine name" required />
                 </div>
                 <div class="form-group col-md-4">
-                    <label>Due Date</label>
-                    <input type="date" name="due_date" class="form-control" required />
+                    <label for="due-date">Due Date</label>
+                    <input type="date" id="due-date" name="due_date" class="form-control" required />
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Add Vaccination</button>
@@ -115,10 +115,10 @@
     </div>
 
     <!-- Vaccination History -->
-    <div class="card p-4 mt-4">
+    <div class="card p-4 mb-4">
         <h5>Vaccination History</h5>
         {% if vaccination_history %}
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped mb-0">
             <thead>
                 <tr>
                     <th>Date</th>
@@ -135,7 +135,7 @@
                     <td>{{ record[3] }}</td>
                     <td>
                         <a href="{{ url_for('edit_vaccination', animal_id=animal[0], vaccination_id=record[0]) }}" class="btn btn-sm btn-warning">Edit</a>
-                        <a href="{{ url_for('delete_vaccination', animal_id=animal[0], vaccination_id=record[0]) }}" class="btn btn-sm btn-danger">Delete</a>
+                        <a href="{{ url_for('delete_vaccination', animal_id=animal[0], vaccination_id=record[0]) }}" class="btn btn-sm btn-danger" onclick="return confirm('Delete this vaccination record?')">Delete</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -146,11 +146,11 @@
         {% endif %}
     </div>
 
-    <!-- Delete Animal + Back -->
-    <div class="mt-4">
-        <form method="POST" action="{{ url_for('delete_animal', animal_id=animal[0]) }}" onsubmit="return confirm('Are you sure you want to delete this animal?')">
+    <!-- Delete Animal + Back Buttons -->
+    <div class="mb-5">
+        <form method="POST" action="{{ url_for('delete_animal', animal_id=animal[0]) }}" onsubmit="return confirm('Are you sure you want to delete this animal? This action cannot be undone.')">
             <button type="submit" class="btn btn-danger">🗑️ Delete Animal</button>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">← Back to List</a>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary ml-2">← Back to List</a>
         </form>
     </div>
 </div>
