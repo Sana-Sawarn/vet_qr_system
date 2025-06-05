@@ -8,7 +8,7 @@
 </head>
 <body class="bg-light">
 <div class="container mt-5">
-    <h1 class="mb-4">Register Animal</h1>
+    <h1 class="mb-4">Registered Animals</h1>
 
     <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -23,55 +23,14 @@
       {% endif %}
     {% endwith %}
 
-    <form action="{{ url_for('add_animal') }}" method="post" class="mb-5">
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label for="name">Name</label>
-                <input type="text" id="name" name="name" class="form-control" required autocomplete="off" />
-            </div>
-            <div class="form-group col-md-3">
-                <label for="species">Species</label>
-                <input type="text" id="species" name="species" class="form-control" required autocomplete="off" />
-            </div>
-            <div class="form-group col-md-3">
-                <label for="owner">Owner Name</label>
-                <input type="text" id="owner" name="owner" class="form-control" required autocomplete="off" />
-            </div>
-            <div class="form-group col-md-3">
-                <label for="contact">Contact</label>
-                <input type="tel" id="contact" name="contact" class="form-control" required placeholder="e.g. +1234567890" autocomplete="off" />
-            </div>
-        </div>
-        <button type="submit" class="btn btn-primary">Generate QR</button>
-    </form>
+    <a href="{{ url_for('register') }}" class="btn btn-primary mb-4">Register New Animal</a>
 
-    <h2>Registered Animals</h2>
     <ul class="list-group">
         {% for a in animals %}
             <li class="list-group-item">
-                <div class="d-flex align-items-center justify-content-between flex-wrap">
-                    <div>
-                        <a href="{{ url_for('animal_detail', animal_id=a[0]) }}">
-                            <strong>{{ a[1] }}</strong> - {{ a[2] }} (Owner: {{ a[3] }})
-                        </a>
-                    </div>
-
-                    <div>
-                        {% if a[5] %}
-                            <a href="{{ url_for('animal_detail', animal_id=a[0]) }}" target="_blank" title="View Treatment History">
-                                <img src="{{ url_for('static', filename=a[5]) }}" width="100" alt="QR Code for {{ a[1] }}" />
-                            </a>
-                        {% else %}
-                            <span class="text-muted">No QR code generated</span>
-                        {% endif %}
-                    </div>
-
-                    <div>
-                        <form action="{{ url_for('delete_animal', animal_id=a[0]) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this animal?');" style="display:inline;">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                        </form>
-                    </div>
-                </div>
+                <a href="{{ url_for('view_animal', animal_id=a[0]) }}">
+                    <strong>{{ a[1] }}</strong> - {{ a[2] }} (Owner: {{ a[3] }})
+                </a>
             </li>
         {% else %}
             <li class="list-group-item text-muted">No animals registered yet.</li>
