@@ -1,15 +1,43 @@
+<!-- templates/animal_profile.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Animal Profile</title>
 </head>
 <body>
-    <h1>Animal Profile</h1>
-    <p><strong>Name:</strong> {{ animal[1] }}</p>
+    <h2>Animal Profile: {{ animal[1] }}</h2>
     <p><strong>Species:</strong> {{ animal[2] }}</p>
     <p><strong>Owner:</strong> {{ animal[3] }}</p>
     <p><strong>Contact:</strong> {{ animal[4] }}</p>
 
+    <hr>
+    <h3>Vaccination History</h3>
+    {% if vaccinations %}
+    <table border="1">
+        <tr>
+            <th>Date</th>
+            <th>Vaccine</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+        </tr>
+        {% for v in vaccinations %}
+        <tr>
+            <td>{{ v[2] }}</td>
+            <td>{{ v[3] }}</td>
+            <td>{{ v[4] }}</td>
+            <td>
+                <a href="{{ url_for('edit_vaccination', id=v[0]) }}">Edit</a> |
+                <a href="{{ url_for('delete_vaccination', id=v[0]) }}" onclick="return confirm('Delete this record?');">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No vaccination records found.</p>
+    {% endif %}
+    <br>
+    <a href="{{ url_for('add_vaccination', animal_id=animal[0]) }}">Add Vaccination Record</a><br>
     <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
 </body>
 </html>

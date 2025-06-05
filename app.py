@@ -15,7 +15,6 @@ app.secret_key = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-
 def get_db_connection():
     if 'conn' not in g:
         if not DATABASE_URL:
@@ -23,7 +22,6 @@ def get_db_connection():
         g.conn = psycopg2.connect(DATABASE_URL)
         g.cursor = g.conn.cursor()
     return g.conn, g.cursor
-
 
 @app.teardown_appcontext
 def close_db_connection(exception):
@@ -34,11 +32,9 @@ def close_db_connection(exception):
     if conn:
         conn.close()
 
-
 def init_db():
     conn, cursor = get_db_connection()
 
-    # Create animals table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS animals (
             id SERIAL PRIMARY KEY,
@@ -49,7 +45,6 @@ def init_db():
         );
     """)
 
-    # Create users table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -58,14 +53,22 @@ def init_db():
         );
     """)
 
-    # Insert default user
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS vaccinations (
+            id SERIAL PRIMARY KEY,
+            animal_id INTEGER REFERENCES animals(id) ON DELETE CASCADE,
+            vaccine TEXT NOT NULL,
+            vaccination_date DATE NOT NULL,
+            due_date DATE NOT NULL
+        );
+    """)
+
     cursor.execute("SELECT * FROM users WHERE username = %s;", ('buddy pet care and clinic',))
     if not cursor.fetchone():
         cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s);",
                        ('buddy pet care and clinic', 'baborajss'))
 
     conn.commit()
-
 
 def login_required(f):
     @wraps(f)
@@ -74,14 +77,11 @@ def login_required(f):
             flash('Please log in to access this page.', 'warning')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
-
     return decorated_function
-
 
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -102,14 +102,12 @@ def login():
 
     return render_template('login.html')
 
-
 @app.route('/logout')
 @login_required
 def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
-
 
 @app.route('/dashboard')
 @login_required
@@ -118,7 +116,6 @@ def dashboard():
     cursor.execute("SELECT * FROM animals ORDER BY id DESC;")
     animals = cursor.fetchall()
     return render_template('dashboard.html', animals=animals)
-
 
 @app.route('/register', methods=['GET', 'POST'])
 @login_required
@@ -155,7 +152,6 @@ def register():
 
     return render_template('register.html')
 
-
 @app.route('/animal/<int:animal_id>')
 @login_required
 def view_animal(animal_id):
@@ -165,8 +161,28 @@ def view_animal(animal_id):
     if not animal:
         flash("Animal not found.", "warning")
         return redirect(url_for('dashboard'))
-    return render_template('animal_profile.html', animal=animal)
 
+    cursor.execute("SELECT * FROM vaccinations WHERE animal_id = %s ORDER BY vaccination_date DESC;", (animal_id,))
+    vaccinations = cursor.fetchall()
+
+    return render_template('animal_profile.html', animal=animal, vaccinations=vaccinations)
+
+@app.route('/animal/<int:animal_id>/vaccinate', methods=['GET', 'POST'])
+@login_required
+def add_vaccination(animal_id):
+    if request.method == 'POST':
+        vaccine = request.form['vaccine']
+        vaccination_date = request.form['vaccination_date']
+        due_date = request.form['due_date']
+
+        conn, cursor = get_db_connection()
+        cursor.execute("INSERT INTO vaccinations (animal_id, vaccine, vaccination_date, due_date) VALUES (%s, %s, %s, %s)",
+                       (animal_id, vaccine, vaccination_date, due_date))
+        conn.commit()
+        flash('Vaccination record added.', 'success')
+        return redirect(url_for('view_animal', animal_id=animal_id))
+
+    return render_template('add_vaccination.html', animal_id=animal_id)
 
 @app.route('/init')
 def init():
@@ -175,7 +191,6 @@ def init():
         return "Database initialized."
     except Exception as e:
         return f"Error initializing database: {e}"
-
 
 if __name__ == '__main__':
     app.run(debug=True)

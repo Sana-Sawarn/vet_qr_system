@@ -1,0 +1,21 @@
+<!-- templates/add_vaccination.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Vaccination Record</title>
+</head>
+<body>
+    <h2>Add Vaccination Record for {{ animal.name }}</h2>
+    <form method="POST">
+        <label>Date:</label><br>
+        <input type="date" name="date" required><br><br>
+        <label>Vaccine Given:</label><br>
+        <input type="text" name="vaccine" required><br><br>
+        <label>Due Date:</label><br>
+        <input type="date" name="due_date" required><br><br>
+        <button type="submit">Add</button>
+        <a href="{{ url_for('view_animal', animal_id=animal.id) }}">Back</a>
+    </form>
+</body>
+</html>
