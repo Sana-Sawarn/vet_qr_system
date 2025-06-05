@@ -1,32 +1,29 @@
+from flask import Flask, render_template, request, redirect, url_for, session, flash, g
+import qrcode
 import os
+from datetime import datetime
+from functools import wraps
+import psycopg2
+from dotenv import load_dotenv
 import io
 import base64
-import qrcode
-import psycopg2
-from datetime import date
-from flask import Flask, render_template, request, redirect, url_for, flash, g
-from flask_wtf import FlaskForm
-from wtforms import StringField, DateField, HiddenField
-from wtforms.validators import DataRequired
-from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
+app.secret_key = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
-# ---------- DB Connection ----------
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+
 def get_db_connection():
     if 'conn' not in g:
-        g.conn = psycopg2.connect(
-            dbname=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT")
-        )
+        if not DATABASE_URL:
+            raise ValueError("DATABASE_URL is not set")
+        g.conn = psycopg2.connect(DATABASE_URL)
         g.cursor = g.conn.cursor()
     return g.conn, g.cursor
+
 
 @app.teardown_appcontext
 def close_db_connection(exception):
@@ -37,20 +34,7 @@ def close_db_connection(exception):
     if conn:
         conn.close()
 
-# ---------- Forms ----------
-class TreatmentForm(FlaskForm):
-    type = HiddenField(default="treatment")
-    date = DateField('Date', validators=[DataRequired()])
-    diagnosis = StringField('Diagnosis', validators=[DataRequired()])
-    treatment = StringField('Treatment', validators=[DataRequired()])
 
-class VaccinationForm(FlaskForm):
-    type = HiddenField(default="vaccination")
-    date = DateField('Date', validators=[DataRequired()])
-    vaccine = StringField('Vaccine', validators=[DataRequired()])
-    due_date = DateField('Due Date', validators=[DataRequired()])
-
-# ---------- Init Tables ----------
 def init_db():
     conn, cursor = get_db_connection()
     cursor.execute("""
@@ -60,135 +44,90 @@ def init_db():
             species TEXT NOT NULL,
             owner TEXT NOT NULL,
             contact TEXT NOT NULL
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS treatment_records (
-            id SERIAL PRIMARY KEY,
-            animal_id INTEGER REFERENCES animals(id) ON DELETE CASCADE,
-            date DATE NOT NULL,
-            diagnosis TEXT NOT NULL,
-            treatment TEXT NOT NULL
-        )
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS vaccination_records (
-            id SERIAL PRIMARY KEY,
-            animal_id INTEGER REFERENCES animals(id) ON DELETE CASCADE,
-            date DATE NOT NULL,
-            vaccine TEXT NOT NULL,
-            due_date DATE NOT NULL
-        )
+        );
     """)
     conn.commit()
 
-# Initialize on first run
-with app.app_context():
-    init_db()
 
-# ---------- Routes ----------
-@app.route("/")
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@app.route('/')
 def index():
+    return render_template('index.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form['username'] == 'admin' and request.form['password'] == 'password':
+            session['logged_in'] = True
+            return redirect(url_for('dashboard'))
+        flash('Invalid Credentials')
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
     conn, cursor = get_db_connection()
-    cursor.execute("SELECT * FROM animals ORDER BY id DESC")
+    cursor.execute("SELECT * FROM animals;")
     animals = cursor.fetchall()
-    return render_template("index.html", animals=animals)
+    return render_template('dashboard.html', animals=animals)
 
-@app.route("/add_animal", methods=["POST"])
-def add_animal():
+
+@app.route('/register', methods=['GET', 'POST'])
+@login_required
+def register():
+    if request.method == 'POST':
+        name = request.form['name']
+        species = request.form['species']
+        owner = request.form['owner']
+        contact = request.form['contact']
+        conn, cursor = get_db_connection()
+        cursor.execute("INSERT INTO animals (name, species, owner, contact) VALUES (%s, %s, %s, %s) RETURNING id;",
+                       (name, species, owner, contact))
+        animal_id = cursor.fetchone()[0]
+        conn.commit()
+
+        # Generate QR code
+        qr_data = f"http://yourdomain.com/animal/{animal_id}"
+        qr_img = qrcode.make(qr_data)
+        buf = io.BytesIO()
+        qr_img.save(buf, format='PNG')
+        qr_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+        return render_template('qr_display.html', qr_code=qr_base64, animal_id=animal_id)
+    return render_template('register.html')
+
+
+@app.route('/animal/<int:animal_id>')
+@login_required
+def view_animal(animal_id):
     conn, cursor = get_db_connection()
-    name = request.form.get("name", "").strip()
-    species = request.form.get("species", "").strip()
-    owner = request.form.get("owner", "").strip()
-    contact = request.form.get("contact", "").strip()
-
-    if not (name and species and owner and contact):
-        flash("All fields are required.", "danger")
-        return redirect(url_for("index"))
-
-    cursor.execute(
-        "INSERT INTO animals (name, species, owner, contact) VALUES (%s, %s, %s, %s)",
-        (name, species, owner, contact)
-    )
-    conn.commit()
-    flash(f"Animal '{name}' added successfully.", "success")
-    return redirect(url_for("index"))
-
-@app.route("/delete_animal/<int:animal_id>", methods=["POST"])
-def delete_animal(animal_id):
-    conn, cursor = get_db_connection()
-    cursor.execute("DELETE FROM animals WHERE id = %s", (animal_id,))
-    conn.commit()
-    flash("Animal deleted successfully.", "success")
-    return redirect(url_for("index"))
-
-@app.route("/animal/<int:animal_id>", methods=["GET", "POST"])
-def animal_detail(animal_id):
-    conn, cursor = get_db_connection()
-    cursor.execute("SELECT * FROM animals WHERE id = %s", (animal_id,))
+    cursor.execute("SELECT * FROM animals WHERE id = %s;", (animal_id,))
     animal = cursor.fetchone()
     if not animal:
-        flash("Animal not found.", "danger")
-        return redirect(url_for("index"))
+        flash("Animal not found")
+        return redirect(url_for('dashboard'))
+    return render_template('animal_profile.html', animal=animal)
 
-    treatment_form = TreatmentForm(prefix="treatment")
-    vaccination_form = VaccinationForm(prefix="vaccination")
+@app.route('/init')
+def init():
+    init_db()
+    return "Database initialized."
 
-    if request.method == "POST":
-        if treatment_form.validate_on_submit() and treatment_form.type.data == "treatment":
-            cursor.execute("""
-                INSERT INTO treatment_records (animal_id, date, diagnosis, treatment)
-                VALUES (%s, %s, %s, %s)
-            """, (
-                animal_id,
-                treatment_form.date.data,
-                treatment_form.diagnosis.data.strip(),
-                treatment_form.treatment.data.strip()
-            ))
-            conn.commit()
-            flash("Treatment record added successfully", "success")
-            return redirect(url_for("animal_detail", animal_id=animal_id))
-
-        elif vaccination_form.validate_on_submit() and vaccination_form.type.data == "vaccination":
-            cursor.execute("""
-                INSERT INTO vaccination_records (animal_id, date, vaccine, due_date)
-                VALUES (%s, %s, %s, %s)
-            """, (
-                animal_id,
-                vaccination_form.date.data,
-                vaccination_form.vaccine.data.strip(),
-                vaccination_form.due_date.data
-            ))
-            conn.commit()
-            flash("Vaccination record added successfully", "success")
-            return redirect(url_for("animal_detail", animal_id=animal_id))
-
-        flash("Invalid form submission.", "danger")
-        return redirect(url_for("animal_detail", animal_id=animal_id))
-
-    # Generate QR Code
-    url_for_detail = url_for('animal_detail', animal_id=animal_id, _external=True)
-    qr = qrcode.make(url_for_detail)
-    buffer = io.BytesIO()
-    qr.save(buffer, format="PNG")
-    qr_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-
-    cursor.execute("SELECT id, date, diagnosis, treatment FROM treatment_records WHERE animal_id = %s ORDER BY date DESC", (animal_id,))
-    treatment_history = cursor.fetchall()
-
-    cursor.execute("SELECT id, date, vaccine, due_date FROM vaccination_records WHERE animal_id = %s ORDER BY date DESC", (animal_id,))
-    vaccination_history = cursor.fetchall()
-
-    return render_template(
-        "animal.html",
-        animal=animal,
-        qr_base64=qr_base64,
-        treatment_history=treatment_history,
-        vaccination_history=vaccination_history,
-        treatment_form=treatment_form,
-        vaccination_form=vaccination_form,
-        current_date=date.today().isoformat()
-    )
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
