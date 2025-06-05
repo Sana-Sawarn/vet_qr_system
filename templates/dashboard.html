@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - Animal List</title>
+</head>
+<body>
+    <h1>Registered Animals</h1>
+    <a href="{{ url_for('register') }}">Register New Animal</a> |
+    <a href="{{ url_for('logout') }}">Logout</a>
+    <ul>
+        {% for animal in animals %}
+            <li>
+                <a href="{{ url_for('view_animal', animal_id=animal[0]) }}">
+                    {{ animal[1] }} ({{ animal[2] }}) - Owner: {{ animal[3] }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

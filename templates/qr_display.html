@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Animal QR Code</title>
+</head>
+<body>
+    <h1>Animal Registered Successfully!</h1>
+    <p>Animal ID: {{ animal_id }}</p>
+    <p>Scan this QR code to view the animal's profile:</p>
+    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+    <br>
+    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+</body>
+</html>
